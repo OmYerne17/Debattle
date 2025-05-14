@@ -61,9 +61,12 @@ export default function DebatePage() {
   const [created, setCreated] = useState(false);
   const [arguments_, setArguments] = useState<GeminiResponse[]>([]);
   const [votes, setVotes] = useState({ pro: 0, con: 0 });
-  const [chat, setChat] = useState<any[]>([]);
+  const [chat, setChat] = useState<Array<{
+    content: string;
+    role: 'AI1' | 'AI2' | 'user';
+    timestamp: Date;
+  }>>([]);
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
   const [debateAI, setDebateAI] = useState<DebateAI | null>(null);
   const [rounds, setRounds] = useState(3); // N rounds
   const [debateRunning, setDebateRunning] = useState(false);
@@ -83,27 +86,25 @@ export default function DebatePage() {
       const ai = new DebateAI(apiKey);
       ai.setTopic(selected);
       setDebateAI(ai);
-      setLoading(true);
       ai.generateInitialArguments().then((args) => {
         setArguments(args);
         // Add initial arguments to chat
         setChat([
           {
-            content: args.find((a) => a.role === "AI1")?.content,
+            content: args.find((a) => a.role === "AI1")?.content || '',
             role: "AI1",
             timestamp: new Date(),
           },
           {
-            content: args.find((a) => a.role === "AI2")?.content,
+            content: args.find((a) => a.role === "AI2")?.content || '',
             role: "AI2",
             timestamp: new Date(),
           },
         ]);
-        setLoading(false);
         setCurrentRound(1);
       });
     }
-  }, [created, selected]);
+  }, [created, selected, apiKey]);
 
   const handleCreateRoom = () => {
     if (selected) {
@@ -193,13 +194,6 @@ export default function DebatePage() {
   // If user types in search, treat it as a custom topic
   const customTopic =
     search.trim() && !topics.some((t) => t.key === search.trim().toLowerCase());
-
-  // Random topic selection (from all topics)
-  const handleRandomTopic = () => {
-    const random = topics[Math.floor(Math.random() * topics.length)];
-    setSelected(random.key);
-    setSearch("");
-  };
 
   // When user types, set selected to custom topic
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -311,7 +305,9 @@ export default function DebatePage() {
                 <h3 className="text-xl font-bold text-white mb-2">
                   {topic.title}
                 </h3>
-                <p className="text-gray-300 text-center">{topic.description}</p>
+                <div className="text-center text-gray-600">
+                  &ldquo;{topic.description}&rdquo;
+                </div>
               </button>
             ))}
           </div>
@@ -319,7 +315,7 @@ export default function DebatePage() {
           {customTopic && (
             <div className="mb-4 text-center">
               <span className="inline-block bg-blue-100 text-blue-800 px-4 py-2 rounded font-bold">
-                Custom Topic: "{search.trim()}"
+                Custom Topic: &ldquo;{search.trim()}&rdquo;
               </span>
             </div>
           )}

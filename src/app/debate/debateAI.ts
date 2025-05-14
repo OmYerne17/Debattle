@@ -19,10 +19,10 @@ function truncateTo30Words(text: string): string {
 
 export class DebateAI {
   private generativeClient: GoogleGenerativeAI | null = null;
-  private proModel: any = null;
-  private conModel: any = null;
-  private proChat: any = null;
-  private conChat: any = null;
+  private proModel: ReturnType<GoogleGenerativeAI['getGenerativeModel']> | null = null;
+  private conModel: ReturnType<GoogleGenerativeAI['getGenerativeModel']> | null = null;
+  private proChat: ReturnType<ReturnType<GoogleGenerativeAI['getGenerativeModel']>['startChat']> | null = null;
+  private conChat: ReturnType<ReturnType<GoogleGenerativeAI['getGenerativeModel']>['startChat']> | null = null;
   private topic: string = '';
   private apiKey: string | undefined;
   private initialized: boolean = false;
@@ -44,8 +44,8 @@ export class DebateAI {
       this.proModel = this.generativeClient.getGenerativeModel({ model: MODEL_NAME_PRO });
       this.conModel = this.generativeClient.getGenerativeModel({ model: MODEL_NAME_FLASH });
       this.initialized = true;
-    } catch (error) {
-      console.error("Failed to initialize Gemini AI:", error);
+    } catch {
+      console.error("Failed to initialize Gemini AI");
       this.initialized = false;
     }
   }
@@ -100,8 +100,8 @@ export class DebateAI {
           topK: 40
         }
       });
-    } catch (error) {
-      console.error("Error resetting chat sessions:", error);
+    } catch {
+      console.error("Error resetting chat sessions");
     }
   }
 
@@ -131,7 +131,7 @@ export class DebateAI {
         { content: proText, role: 'AI1' },
         { content: conText, role: 'AI2' },
       ];
-    } catch (error) {
+    } catch {
       return this.generateArgumentsWithDirectAPI();
     }
   }
@@ -155,7 +155,7 @@ export class DebateAI {
         { content: proText, role: 'AI1' },
         { content: conText, role: 'AI2' },
       ];
-    } catch (error) {
+    } catch {
       return [
         { content: 'Error generating argument in favor. Please try again.', role: 'AI1' },
         { content: 'Error generating argument against. Please try again.', role: 'AI2' },
@@ -177,7 +177,7 @@ export class DebateAI {
       }
       const result = await this.proChat.sendMessage(message);
       return truncateTo30Words(result.response.text() || 'Unable to generate a response.');
-    } catch (error) {
+    } catch {
       return 'Error generating a response. Please try again.';
     }
   }
@@ -196,7 +196,7 @@ export class DebateAI {
       }
       const result = await this.conChat.sendMessage(message);
       return truncateTo30Words(result.response.text() || 'Unable to generate a response.');
-    } catch (error) {
+    } catch {
       return 'Error generating a response. Please try again.';
     }
   }
@@ -210,7 +210,7 @@ export async function generateDebateArguments(topic: string, apiKey: string): Pr
     const debateAI = new DebateAI(apiKey);
     debateAI.setTopic(topic);
     return await debateAI.generateInitialArguments();
-  } catch (error) {
+  } catch {
     return [
       { content: 'Error generating argument in favor. Please try again later.', role: 'AI1' },
       { content: 'Error generating argument against. Please try again later.', role: 'AI2' },

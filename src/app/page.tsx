@@ -100,14 +100,11 @@ export default function Home() {
         <section className="w-full max-w-4xl mb-16">
           <h2 className="text-2xl font-bold text-white mb-6 text-center">How It Works</h2>
           <div className="flex flex-col md:flex-row gap-8 justify-center items-center">
-            {flow.map((f, idx) => (
+            {flow.map((f) => (
               <div key={f.step} className="flex flex-col items-center bg-[#232b39] rounded-xl p-6 shadow-lg w-full md:w-1/4">
                 <div className="text-3xl font-bold text-blue-400 mb-2">{f.step}</div>
                 <div className="text-xl font-bold text-white mb-1">{f.title}</div>
                 <div className="text-gray-300 text-center text-sm">{f.desc}</div>
-                {/* {idx < flow.length - 1 && (
-                  <div className="hidden md:block absolute right-0 top-1/2 transform -translate-y-1/2 text-4xl text-blue-400">→</div>
-                )} */}
               </div>
             ))}
           </div>
@@ -117,8 +114,8 @@ export default function Home() {
         <section className="w-full max-w-6xl mx-auto">
           <h2 className="text-2xl font-bold text-white mb-8 text-center">Popular Debate Topics</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {topics.map((topic, idx) => (
-              <div key={idx} className="bg-[#232b39] rounded-xl p-8 flex flex-col items-center shadow-lg">
+            {topics.map((topic) => (
+              <div key={topic.title} className="bg-[#232b39] rounded-xl p-8 flex flex-col items-center shadow-lg">
                 <div className="text-4xl mb-4">{topic.icon}</div>
                 <h3 className="text-xl font-bold text-white mb-2">{topic.title}</h3>
                 <p className="text-gray-300 text-center">{topic.description}</p>
