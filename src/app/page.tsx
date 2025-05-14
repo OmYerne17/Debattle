@@ -1,5 +1,5 @@
 'use client'
-import { FaRegCommentDots, FaGlobe, FaChartLine, FaUserSecret, FaBitcoin, FaHeart, FaUserCircle, FaCube } from "react-icons/fa";
+import { FaRegCommentDots, FaGlobe, FaChartLine, FaUserSecret, FaBitcoin, FaHeart } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import Header from '@/components/Header';
 
