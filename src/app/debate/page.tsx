@@ -241,7 +241,7 @@ export default function DebatePage() {
         </span>
         {/* On topic selection page, clicking Debattle runs handleCreateRoom if a topic is selected */}
         <span
-          onClick={() => router.push("/debate")}
+          onClick={() => router.push("/")}
           className={`text-2xl font-extrabold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent select-none ${
             !created ? "cursor-pointer" : ""
           }`}
@@ -280,7 +280,7 @@ export default function DebatePage() {
               value={search}
               onChange={handleSearchChange}
               placeholder="Type any topic to start a debate..."
-              className="flex-1 px-4 py-2 rounded border border-gray-400 text-indigo-600"
+              className="flex-1 px-4 py-2 rounded border border-gray-400 text-white"
             />
             <button
               className="px-6 py-2 rounded bg-blue-500 text-white font-bold hover:bg-blue-600 transition"
