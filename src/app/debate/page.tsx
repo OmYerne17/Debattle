@@ -12,6 +12,7 @@ import {
 } from "react-icons/fa";
 import { DebateAI, GeminiResponse } from "./debateAI";
 import { useRouter } from "next/navigation";
+import Header from "@/components/Header";
 
 const topics = [
   {
@@ -232,36 +233,7 @@ export default function DebatePage() {
   };
 
   // Header component
-  const Header = () => (
-    <header className="w-full sticky top-0 z-50 bg-[#181f2a] border-b border-gray-800 shadow flex items-center justify-between px-6 py-3">
-      <div className="flex items-center gap-3">
-        {/* 3D Logo (cube icon as placeholder) */}
-        <span className="text-3xl text-blue-400">
-          <FaCube />
-        </span>
-        {/* On topic selection page, clicking Debattle runs handleCreateRoom if a topic is selected */}
-        <span
-          onClick={() => router.push("/")}
-          className={`text-2xl font-extrabold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent select-none ${
-            !created ? "cursor-pointer" : ""
-          }`}
-        >
-          Debattle
-        </span>
-      </div>
-      <div className="flex items-center gap-4">
-        <button className="px-4 py-1 rounded bg-blue-500 text-white font-bold hover:bg-blue-600 transition">
-          Signup
-        </button>
-        <button className="px-4 py-1 rounded bg-purple-500 text-white font-bold hover:bg-purple-600 transition">
-          Login
-        </button>
-        <span className="text-3xl text-gray-300 ml-2 cursor-pointer">
-          <FaUserCircle />
-        </span>
-      </div>
-    </header>
-  );
+     <Header/>
 
   // UI rendering
   if (!created) {
