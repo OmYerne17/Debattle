@@ -14,8 +14,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Debattle",
-  description: "Debate the topic with AI",
+  title: "Debattle - AI Debate Room",
+  description: "Engage in AI-powered debates on various topics",
+  icons: {
+    icon: '/globe.svg',
+  },
 };
 
 export default function RootLayout({
