@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
+import { FirebaseError } from 'firebase/app';
 
 export default function SignUp() {
   const [email, setEmail] = useState('');
@@ -25,8 +26,12 @@ export default function SignUp() {
     try {
       await createUserWithEmailAndPassword(auth, email, password);
       router.push('/'); // Redirect to home page after successful signup
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      if (error instanceof FirebaseError) {
+        setError(error.message);
+      } else {
+        setError('An unexpected error occurred');
+      }
     } finally {
       setLoading(false);
     }

@@ -7,11 +7,8 @@ import {
   FaUserSecret,
   FaBitcoin,
   FaHeart,
-  FaUserCircle,
-  FaCube,
 } from "react-icons/fa";
 import { DebateAI, GeminiResponse } from "./debateAI";
-import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 
 const topics = [
@@ -77,7 +74,6 @@ export default function DebatePage() {
     con: false,
   });
   const [search, setSearch] = useState("");
-  const router = useRouter();
 
   // Get API key from env
   const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY as string;
