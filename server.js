@@ -71,6 +71,17 @@ io.on('connection', (socket) => {
     });
   });
 
+  // Add new events for debate messages
+  socket.on('debate-message', ({ roomId, message }) => {
+    // Broadcast the debate message to everyone in the room
+    io.to(roomId).emit('debate-message', message);
+  });
+
+  socket.on('debate-typing', ({ roomId, side, isTyping }) => {
+    // Broadcast typing status to everyone except sender
+    socket.to(roomId).emit('debate-typing', { side, isTyping });
+  });
+
   socket.on('disconnect', () => {
     // Remove user from all rooms they were in
     activeUsers.forEach((users, roomId) => {

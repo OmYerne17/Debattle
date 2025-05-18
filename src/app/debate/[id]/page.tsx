@@ -1,11 +1,13 @@
 "use client";
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import { DebateAI, GeminiResponse } from "../debateAI";
 import LiveChat from '@/components/LiveChat';
 import { useAuth } from '@/context/AuthContext';
 import { database } from '@/lib/firebase';
 import { ref, onValue, update } from 'firebase/database';
+import { connectSocket, disconnectSocket, joinRoom, leaveRoom, sendDebateMessage, sendDebateTyping, getSocket } from '@/lib/socket';
+import { useSocket } from '@/context/SocketContext';
 
 const BOT_NAMES = { pro: "OptiBot", con: "CautiBot" };
 const BOT_BADGES = { pro: "Pro", con: "Con" };
@@ -44,7 +46,8 @@ const copyToClipboard = async (text: string): Promise<boolean> => {
 };
 
 export default function DebateRoomPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id: debateId } = use(params);
+  const resolvedParams = use(params);
+  const debateId = resolvedParams.id;
   const [arguments_, setArguments] = useState<GeminiResponse[]>([]);
   const [votes, setVotes] = useState({ pro: 0, con: 0 });
   const [chat, setChat] = useState<Array<{
@@ -66,6 +69,7 @@ export default function DebateRoomPage({ params }: { params: Promise<{ id: strin
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { user } = useAuth();
+  const { socket, isConnected, isInitialized } = useSocket();
 
   // Get API key from env
   const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY as string;
@@ -140,6 +144,50 @@ export default function DebateRoomPage({ params }: { params: Promise<{ id: strin
     }
   }, [debateId, debateAI, apiKey]);
 
+  const handleDebateMessage = useCallback((message: { content: string; role: 'AI1' | 'AI2'; timestamp: Date }) => {
+    if (message.role === 'AI1') {
+      setProCards(prev => [...prev, message.content]);
+    } else {
+      setConCards(prev => [...prev, message.content]);
+    }
+    setChat(prev => [...prev, {
+      content: message.content,
+      role: message.role,
+      timestamp: new Date(message.timestamp)
+    }]);
+  }, []);
+
+  const handleTypingStatus = useCallback(({ side, isTyping }: { side: 'pro' | 'con'; isTyping: boolean }) => {
+    setTyping(prev => ({
+      ...prev,
+      [side === 'pro' ? 'pro' : 'con']: isTyping
+    }));
+  }, []);
+
+  // Connect to socket and join room
+  useEffect(() => {
+    if (!socket || !isInitialized || !debateId) return;
+
+    try {
+      // Join the debate room
+      joinRoom(socket, debateId);
+      console.log('Joined debate room:', debateId);
+
+      // Set up event listeners
+      socket.on('debate-message', handleDebateMessage);
+      socket.on('debate-typing', handleTypingStatus);
+
+      return () => {
+        leaveRoom(socket, debateId);
+        socket.off('debate-message', handleDebateMessage);
+        socket.off('debate-typing', handleTypingStatus);
+      };
+    } catch (error) {
+      console.error('Error setting up debate room:', error);
+      setError('Failed to join debate room. Please refresh the page.');
+    }
+  }, [debateId, socket, isInitialized, handleDebateMessage, handleTypingStatus]);
+
   // Update handleVote to use Firebase
   const handleVote = async (side: "pro" | "con") => {
     if (!debateId) return;
@@ -154,9 +202,9 @@ export default function DebateRoomPage({ params }: { params: Promise<{ id: strin
     }
   };
 
-  // N round debate logic
+  // Update startDebateRounds to use socket from context
   const startDebateRounds = async () => {
-    if (!debateAI || debateRunning || !debateId) return;
+    if (!debateAI || debateRunning || !debateId || !socket || !isConnected) return;
     
     try {
       setDebateRunning(true);
@@ -170,50 +218,46 @@ export default function DebateRoomPage({ params }: { params: Promise<{ id: strin
       for (let round = 1; round <= rounds; round++) {
         // PRO AI TURN
         setTyping({ pro: true, con: false });
+        sendDebateTyping(socket, debateId, 'pro', true);
         const lastConMessage = localConCards[localConCards.length - 1];
         const proResponse = await debateAI.generateProResponse(lastConMessage);
         localProCards.push(proResponse);
         setProCards([...localProCards]);
-        setChat(prev => [
-          ...prev,
-          {
-            content: proResponse,
-            role: "AI1",
-            timestamp: new Date()
-          }
-        ]);
+        
+        // Send pro response through socket
+        sendDebateMessage(socket, debateId, {
+          content: proResponse,
+          role: 'AI1',
+          timestamp: new Date()
+        });
+        
         setTyping({ pro: false, con: false });
+        sendDebateTyping(socket, debateId, 'pro', false);
         await new Promise(resolve => setTimeout(resolve, 2000));
 
         // CON AI TURN
         setTyping({ pro: false, con: true });
+        sendDebateTyping(socket, debateId, 'con', true);
         const lastProMessage = localProCards[localProCards.length - 1];
         const conResponse = await debateAI.generateConResponse(lastProMessage);
         localConCards.push(conResponse);
         setConCards([...localConCards]);
-        setChat(prev => [
-          ...prev,
-          {
-            content: conResponse,
-            role: "AI2",
-            timestamp: new Date()
-          }
-        ]);
+        
+        // Send con response through socket
+        sendDebateMessage(socket, debateId, {
+          content: conResponse,
+          role: 'AI2',
+          timestamp: new Date()
+        });
+        
         setTyping({ pro: false, con: false });
+        sendDebateTyping(socket, debateId, 'con', false);
         setCurrentRound(round + 1);
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
     } catch (error) {
       console.error('Debate error:', error);
       setError('An error occurred during the debate. Please try again.');
-      setChat(prev => [
-        ...prev,
-        {
-          content: "An error occurred during the debate. Please try again.",
-          role: "user",
-          timestamp: new Date()
-        }
-      ]);
     } finally {
       setDebateRunning(false);
       setTyping({ pro: false, con: false });
@@ -226,8 +270,13 @@ export default function DebateRoomPage({ params }: { params: Promise<{ id: strin
     setTyping({ pro: false, con: false });
   };
 
-  // Add a function to reset the debate
+  // Update handleResetDebate to use socket from context
   const handleResetDebate = async () => {
+    if (!socket || !isConnected) {
+      setError('Socket not connected. Please refresh the page.');
+      return;
+    }
+
     try {
       setError(null);
       // Reset all debate state
@@ -243,20 +292,19 @@ export default function DebateRoomPage({ params }: { params: Promise<{ id: strin
       if (debateAI && topic) {
         const initialArgs = await debateAI.generateInitialArguments();
         setArguments(initialArgs);
-        setProCards([initialArgs[0].content]);
-        setConCards([initialArgs[1].content]);
-        setChat([
-          {
-            content: initialArgs[0].content,
-            role: "AI1",
-            timestamp: new Date(),
-          },
-          {
-            content: initialArgs[1].content,
-            role: "AI2",
-            timestamp: new Date(),
-          },
-        ]);
+        
+        // Send initial arguments through socket
+        sendDebateMessage(socket, debateId, {
+          content: initialArgs[0].content,
+          role: 'AI1',
+          timestamp: new Date()
+        });
+        
+        sendDebateMessage(socket, debateId, {
+          content: initialArgs[1].content,
+          role: 'AI2',
+          timestamp: new Date()
+        });
       }
     } catch (error) {
       console.error('Error resetting debate:', error);
@@ -296,6 +344,34 @@ export default function DebateRoomPage({ params }: { params: Promise<{ id: strin
       <h2 className="text-2xl font-bold mb-2 text-white text-center">
         Topic: {topic}
       </h2>
+      {/* Room ID Share/Copy UI */}
+      <div className="w-full max-w-4xl flex flex-col md:flex-row items-center justify-between mb-4 gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-gray-400 font-mono text-sm">Room ID:</span>
+          <span className="bg-gray-800 text-blue-300 px-2 py-1 rounded font-mono text-sm select-all">{debateId}</span>
+        </div>
+        <div className="flex gap-2">
+          <button
+            className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm"
+            onClick={async () => {
+              await copyToClipboard(debateId);
+              alert('Room ID copied to clipboard!');
+            }}
+          >
+            Copy Room ID
+          </button>
+          <button
+            className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition text-sm"
+            onClick={async () => {
+              const url = `${window.location.origin}/debate/${debateId}`;
+              await copyToClipboard(url);
+              alert('Room link copied to clipboard!');
+            }}
+          >
+            Copy Room Link
+          </button>
+        </div>
+      </div>
       <div className="text-center text-gray-300 mb-4">
         {getRoundStatus()}
       </div>
@@ -468,6 +544,7 @@ export default function DebateRoomPage({ params }: { params: Promise<{ id: strin
       {/* Live Chat Component */}
       <LiveChat 
         debateId={debateId} 
+        isDebateRunning={debateRunning}
       />
     </div>
   );
