@@ -10,10 +10,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { FirebaseError } from 'firebase/app';
+import { ref as dbRef, set } from 'firebase/database';
+import { database } from '@/lib/firebase';
 
 export default function SignUp() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -24,7 +27,13 @@ export default function SignUp() {
     setError('');
     
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      // Store username in Firebase Realtime Database
+      await set(dbRef(database, `users/${user.uid}`), {
+        email: user.email,
+        username: username
+      });
       router.push('/'); // Redirect to home page after successful signup
     } catch (error: unknown) {
       if (error instanceof FirebaseError) {
@@ -54,6 +63,17 @@ export default function SignUp() {
               </div>
             )}
             <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                type="text"
+                placeholder="Choose a username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -75,7 +95,7 @@ export default function SignUp() {
               />
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
+          <CardFooter className="flex flex-col gap-2">
             <Button 
               type="submit" 
               className="w-full"

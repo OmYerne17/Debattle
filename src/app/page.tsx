@@ -66,7 +66,6 @@ export default function Home() {
 
   return (
     <>
-      <Header />
       <main className="min-h-screen bg-[#181f2a] flex flex-col items-center px-4 pb-20">
         {/* Hero Section */}
         <section className="w-full max-w-4xl text-center mt-16 mb-16">
