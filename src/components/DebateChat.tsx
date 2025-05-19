@@ -27,11 +27,17 @@ const DebateChat: React.FC<DebateChatProps> = ({ roomId }) => {
     onValue(messagesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const messageList = Object.entries(data).map(([id, msg]: [string, any]) => ({
-          id,
-          ...msg
-        }));
-        setMessages(messageList.sort((a, b) => 
+        const formattedMessages = Object.values(data).map((msg: unknown) => {
+          const message = msg as Message;
+          return {
+            id: message.id,
+            text: message.text,
+            sender: message.sender,
+            senderName: message.senderName,
+            timestamp: message.timestamp
+          };
+        });
+        setMessages(formattedMessages.sort((a, b) => 
           new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
         ));
       } else {

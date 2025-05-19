@@ -1,13 +1,12 @@
 "use client";
 import { useState, useEffect, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
-import { DebateAI, GeminiResponse } from "../debateAI";
+import { DebateAI } from "../debateAI";
 import LiveChat from '@/components/LiveChat';
-import { useAuth } from '@/context/AuthContext';
+import { useSocket } from '@/context/SocketContext';
 import { database } from '@/lib/firebase';
 import { ref, onValue, update } from 'firebase/database';
-import { connectSocket, disconnectSocket, joinRoom, leaveRoom, sendDebateMessage, sendDebateTyping, getSocket } from '@/lib/socket';
-import { useSocket } from '@/context/SocketContext';
+import { joinRoom, leaveRoom, sendDebateMessage, sendDebateTyping } from '@/lib/socket';
 
 const BOT_NAMES = { pro: "OptiBot", con: "CautiBot" };
 const BOT_BADGES = { pro: "Pro", con: "Con" };
@@ -48,13 +47,7 @@ const copyToClipboard = async (text: string): Promise<boolean> => {
 export default function DebateRoomPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const debateId = resolvedParams.id;
-  const [arguments_, setArguments] = useState<GeminiResponse[]>([]);
   const [votes, setVotes] = useState({ pro: 0, con: 0 });
-  const [chat, setChat] = useState<Array<{
-    content: string;
-    role: 'AI1' | 'AI2' | 'user';
-    timestamp: Date;
-  }>>([]);
   const [debateAI, setDebateAI] = useState<DebateAI | null>(null);
   const [rounds, setRounds] = useState(3);
   const [debateRunning, setDebateRunning] = useState(false);
@@ -68,7 +61,6 @@ export default function DebateRoomPage({ params }: { params: Promise<{ id: strin
   const [conCards, setConCards] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const { user } = useAuth();
   const { socket, isConnected, isInitialized } = useSocket();
 
   // Get API key from env
@@ -86,16 +78,6 @@ export default function DebateRoomPage({ params }: { params: Promise<{ id: strin
               setTopic(data.topic || '');
               setVotes(data.votes || { pro: 0, con: 0 });
               
-              // Handle chat data
-              if (data.chat) {
-                const chatArray = Object.values(data.chat).map((msg: any) => ({
-                  content: msg.content || '',
-                  role: msg.role || 'user',
-                  timestamp: new Date(msg.timestamp || Date.now())
-                }));
-                setChat(chatArray);
-              }
-              
               // Initialize AI if not already done
               if (!debateAI) {
                 const ai = new DebateAI(apiKey);
@@ -106,21 +88,8 @@ export default function DebateRoomPage({ params }: { params: Promise<{ id: strin
                 const generateInitialArgs = async () => {
                   try {
                     const args = await ai.generateInitialArguments();
-                    setArguments(args);
                     setProCards([args[0].content]);
                     setConCards([args[1].content]);
-                    setChat([
-                      {
-                        content: args[0].content,
-                        role: "AI1",
-                        timestamp: new Date(),
-                      },
-                      {
-                        content: args[1].content,
-                        role: "AI2",
-                        timestamp: new Date(),
-                      },
-                    ]);
                   } catch (error) {
                     console.error('Error generating initial arguments:', error);
                     setError('Failed to generate initial arguments. Please try again.');
@@ -150,11 +119,6 @@ export default function DebateRoomPage({ params }: { params: Promise<{ id: strin
     } else {
       setConCards(prev => [...prev, message.content]);
     }
-    setChat(prev => [...prev, {
-      content: message.content,
-      role: message.role,
-      timestamp: new Date(message.timestamp)
-    }]);
   }, []);
 
   const handleTypingStatus = useCallback(({ side, isTyping }: { side: 'pro' | 'con'; isTyping: boolean }) => {
@@ -212,8 +176,8 @@ export default function DebateRoomPage({ params }: { params: Promise<{ id: strin
       setError(null);
 
       // Use local variables to track the conversation
-      let localProCards = [...proCards];
-      let localConCards = [...conCards];
+      const localProCards = [...proCards];
+      const localConCards = [...conCards];
 
       for (let round = 1; round <= rounds; round++) {
         // PRO AI TURN
@@ -283,15 +247,14 @@ export default function DebateRoomPage({ params }: { params: Promise<{ id: strin
       setCurrentRound(0);
       setProCards([]);
       setConCards([]);
-      setChat([]);
-      setArguments([]);
       setDebateRunning(false);
       setTyping({ pro: false, con: false });
 
       // Generate new initial arguments
       if (debateAI && topic) {
         const initialArgs = await debateAI.generateInitialArguments();
-        setArguments(initialArgs);
+        setProCards([initialArgs[0].content]);
+        setConCards([initialArgs[1].content]);
         
         // Send initial arguments through socket
         sendDebateMessage(socket, debateId, {
@@ -542,10 +505,7 @@ export default function DebateRoomPage({ params }: { params: Promise<{ id: strin
         )}
       </div>
       {/* Live Chat Component */}
-      <LiveChat 
-        debateId={debateId} 
-        isDebateRunning={debateRunning}
-      />
+      <LiveChat debateId={debateId} />
     </div>
   );
 }

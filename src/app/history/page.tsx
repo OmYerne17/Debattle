@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ref, query, orderByChild, get, onValue } from 'firebase/database';
+import { ref, query, orderByChild, onValue } from 'firebase/database';
 import { database } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -89,9 +89,9 @@ export default function HistoryPage() {
           </Card>
         ))}
         {rooms.length === 0 && (
-          <p className="text-gray-500 col-span-full text-center py-8">
-            You haven't created any debate rooms yet.
-          </p>
+          <div className="text-center text-gray-500">
+            You haven&apos;t participated in any debates yet.
+          </div>
         )}
       </div>
     </div>

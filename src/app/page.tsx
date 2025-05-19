@@ -1,7 +1,6 @@
 'use client'
 import { FaRegCommentDots, FaGlobe, FaChartLine, FaUserSecret, FaBitcoin, FaHeart } from "react-icons/fa";
 import { useRouter } from "next/navigation";
-import Header from '@/components/Header';
 
 export default function Home() {
   const router = useRouter();

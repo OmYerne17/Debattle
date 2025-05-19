@@ -11,6 +11,16 @@ interface DebateHistoryItem {
   role: string;
 }
 
+interface RoomData {
+  topic: string;
+  participants: {
+    [key: string]: {
+      joinedAt: string;
+      role: string;
+    };
+  };
+}
+
 const DebateHistory: React.FC = () => {
   const [history, setHistory] = useState<DebateHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,13 +39,14 @@ const DebateHistory: React.FC = () => {
           const rooms = snapshot.val();
           const userHistory: DebateHistoryItem[] = [];
 
-          Object.entries(rooms).forEach(([roomId, roomData]: [string, any]) => {
-            if (roomData.participants && roomData.participants[user.uid]) {
+          Object.entries(rooms).forEach(([roomId, roomData]: [string, unknown]) => {
+            const typedRoomData = roomData as RoomData;
+            if (typedRoomData.participants && typedRoomData.participants[user.uid]) {
               userHistory.push({
                 roomId,
-                topic: roomData.topic,
-                joinedAt: roomData.participants[user.uid].joinedAt,
-                role: roomData.participants[user.uid].role
+                topic: typedRoomData.topic,
+                joinedAt: typedRoomData.participants[user.uid].joinedAt,
+                role: typedRoomData.participants[user.uid].role
               });
             }
           });
@@ -71,7 +82,7 @@ const DebateHistory: React.FC = () => {
       
       {history.length === 0 ? (
         <div className="text-center text-gray-500">
-          You haven't participated in any debates yet.
+          You haven&apos;t participated in any debates yet.
         </div>
       ) : (
         <div className="grid gap-4">

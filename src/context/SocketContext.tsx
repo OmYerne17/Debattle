@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { io } from 'socket.io-client';
+import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
@@ -10,7 +10,7 @@ const RETRY_DELAY = 2000;
 const CONNECTION_TIMEOUT = 10000;
 
 interface SocketContextType {
-  socket: any;
+  socket: Socket | null;
   isConnected: boolean;
   isInitialized: boolean;
   error: string | null;
@@ -26,7 +26,7 @@ const SocketContext = createContext<SocketContextType>({
 export const useSocket = () => useContext(SocketContext);
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
-  const [socket, setSocket] = useState<any>(null);
+  const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +35,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user) return;
 
-    let socketInstance: any = null;
+    let socketInstance: Socket | null = null;
     let retryCount = 0;
     let retryTimeout: NodeJS.Timeout;
     let connectionTimeout: NodeJS.Timeout;
@@ -64,8 +64,8 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
         // Set up connection timeout
         connectionTimeout = setTimeout(() => {
-          if (!socketInstance.connected) {
-            socketInstance.disconnect();
+          if (!socketInstance?.connected) {
+            socketInstance?.disconnect();
             throw new Error('Socket connection timeout');
           }
         }, CONNECTION_TIMEOUT);
@@ -85,7 +85,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
           setIsConnected(false);
         });
 
-        socketInstance.on('connect_error', (error: any) => {
+        socketInstance.on('connect_error', (error: Error) => {
           console.error('Socket connection error:', error);
           clearTimeout(connectionTimeout);
           setError('Failed to connect to server');

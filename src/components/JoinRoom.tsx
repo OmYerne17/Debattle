@@ -27,8 +27,6 @@ const JoinRoom: React.FC = () => {
         return;
       }
 
-      const roomData = roomSnapshot.val();
-
       // Add user to participants
       const updates = {
         [`rooms/${roomId}/participants/${user.uid}`]: {

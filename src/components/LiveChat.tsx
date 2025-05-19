@@ -20,10 +20,9 @@ interface Message {
 
 interface LiveChatProps {
   debateId: string;
-  isDebateRunning: boolean;
 }
 
-export default function LiveChat({ debateId, isDebateRunning }: LiveChatProps) {
+export default function LiveChat({ debateId }: LiveChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -63,11 +62,14 @@ export default function LiveChat({ debateId, isDebateRunning }: LiveChatProps) {
         const data = snapshot.val();
         console.log('Firebase chat data received:', data);
         if (data) {
-          const formattedMessages = Object.values(data).map((msg: any) => ({
-            content: msg.content,
-            user: msg.user,
-            timestamp: new Date(msg.timestamp)
-          }));
+          const formattedMessages = Object.values(data).map((msg: unknown) => {
+            const message = msg as Message;
+            return {
+              content: message.content,
+              user: message.user,
+              timestamp: new Date(message.timestamp)
+            };
+          });
           console.log('Formatted messages to be set:', formattedMessages);
           setMessages(formattedMessages);
         } else {
