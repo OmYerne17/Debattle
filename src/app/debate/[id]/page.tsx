@@ -71,7 +71,7 @@ export default function DebateRoomPage({ params }: { params: Promise<{ id: strin
     if (debateId) {
       try {
         const debateRef = ref(database, `debates/${debateId}`);
-        const unsubscribe = onValue(debateRef, (snapshot) => {
+        const unsubscribe = onValue(debateRef, async (snapshot) => {
           try {
             const data = snapshot.val();
             if (data) {
@@ -81,7 +81,7 @@ export default function DebateRoomPage({ params }: { params: Promise<{ id: strin
               // Initialize AI if not already done
               if (!debateAI) {
                 const ai = new DebateAI(apiKey);
-                ai.setTopic(data.topic || '');
+                await ai.setTopic(data.topic || '');
                 setDebateAI(ai);
                 
                 // Generate initial arguments
